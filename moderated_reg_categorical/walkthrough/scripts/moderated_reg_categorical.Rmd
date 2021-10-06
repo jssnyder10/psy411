@@ -1,0 +1,265 @@
+---
+title: "Categorical Predictors and Moderated Regression w/ Categorical Predictors"
+author: "Jason Snyder"
+date: "XX/XX/2021"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load Libraries
+
+We load the libraries we need for this script.  If your computer did not already install these packages, then you need to install them first.  To install packages, you can either: 
+
+1. type in your **Console** window _**install.packages("here")**_, or 
+2. select the **Tools** menu option followed by **Install Packages...**.
+
+```{r libraries, message=FALSE}
+### Load libaries for use in current working session
+## here for workflow
+library(here)
+
+## tidyverse for data manipulation and plotting
+# Loads eight different libraries simultaneously
+library(tidyverse)
+
+## broom to extract output from statistical models
+library(broom) 
+
+## interactions to prepare 2D plot
+library(interactions) 
+
+## jtools for printing clean results tables
+library(jtools)
+
+## effects for calculating model statistics
+library(effects)
+```
+
+## Load Data
+
+We load _**students.RData**_ from the _**data**_ project directory folder.
+
+```{r data}
+## Load data via the here function
+load(here("data", "students.RData"))
+```
+
+## Dummy Coding
+
+We examine the **class** of **prev.home** from **students**. We apply dummy coding to estimate a regression model to examine mean differences on **age** for the categories of **prev.home**.  
+
+```{r dummyCoding}
+### Check the class of variables
+## Check the class of all variables
+glimpse(students)
+
+## Check the class of specific variable
+class(students$prev.home)
+
+### Coding scheme of a factor variable
+## Check the current coding scheme 
+contrasts(students$prev.home)
+
+## Change referent category
+students$prev.home <- fct_relevel(students$prev.home, "Berlin")
+
+## Check if coding scheme changed
+contrasts(students$prev.home)
+
+### Estimate regression model
+mod_dum_code <- lm(age ~ prev.home, data = students)
+
+## Examine results
+summ(mod_dum_code)
+
+## Compare with descriptive statistics from data
+# Choose data
+students %>%
+  # Grouping variable
+  group_by(prev.home = fct_explicit_na(prev.home)) %>%
+  # Summarize
+  summarize(group_mean = mean(age, na.rm = TRUE))
+```
+
+## Effect Coding
+
+We apply effect coding to **prev.home** and fit a regression model to examine mean differences on **age** as a function of the categories of **prev.home**.
+
+```{r effectCoding}
+### Examine current coding scheme
+contrasts(students$prev.home)
+
+### Effect coding
+## Example
+contr.sum(4)
+
+### Convert coding scheme to from dummy coding to effects coding
+contrasts(students$prev.home) <- contr.sum(4)
+
+## Examine change to coding scheme
+contrasts(students$prev.home)
+
+### Estimate regression model
+mod_eff_code <- lm(age ~ prev.home, data = students)
+
+## Examine results
+summ(mod_eff_code)
+
+## Unweighted grand mean from data
+# Choose data
+students %>%
+  # Grouping variable
+  group_by(prev.home = fct_explicit_na(prev.home)) %>%
+  # Summarize
+  summarize(group_mean = mean(age, na.rm = TRUE)) %>%
+  # Filter rows
+  filter(prev.home != "(Missing)") %>%
+  # Calculate unweighted grand mean
+  summarize(unwgt_grand_mean = mean(group_mean))
+
+## Weighted grand mean from data
+mean(students$age, na.rm = TRUE)
+
+## Mean of the reference group
+coef(mod_eff_code)[1] - sum(coef(mod_eff_code)[2:4])
+```
+
+## Combining Continuous and Categorical Predictors
+
+We examine a regression model where both a _continuous_ and categorical predictors. 
+
+```{r wrangling}
+### Examine current coding scheme for variable
+contrasts(students$sex)
+
+### Select complete data
+## Create data
+sel_stud <- students %>%
+  # Select variables
+  select(ls.1, neuro, sex) %>%
+  # Complete cases only
+  na.omit() 
+
+### Mean center
+## Overwrite data
+sel_stud <- sel_stud %>%
+  # Create centered variable
+  mutate(neuro_cent = neuro - mean(neuro))
+
+```
+
+```{r intEff}
+### Estimate main effects regression model
+mod_add_eff = lm(ls.1 ~ neuro_cent + sex, data = sel_stud)
+
+## Examine results
+summ(mod_add_eff)
+
+### Estimate regression model with interaction eff
+mod_int_eff = lm(ls.1 ~ neuro_cent * sex, data = sel_stud)
+
+## Examine results
+summ(mod_int_eff)
+
+# Change in R^2 
+glance(mod_int_eff)$r.squared - glance(mod_add_eff)$r.squared
+
+# F-test on change in R^2
+anova(mod_add_eff, mod_int_eff)
+
+### Augment data using interaction effect model
+sel_stud <- augment(mod_int_eff, sel_stud)
+```
+
+## Interaction Plot
+
+We plot the interaction present in this model and these variables.
+
+```{r plots}
+### Produce 2D interaction plot
+## Specify model
+interact_plot(mod_int_eff, 
+  ## Specify x-axis variable
+  pred = neuro_cent, 
+  ## Specify moderator variable
+  modx = sex,
+  ## Include points
+  plot.points = TRUE,
+  ## Labels
+  x.label = "Neuroticism", y.label = "Life Sat.", legend.main = "Sex",
+  ## Colors
+  colors = c("red", "blue")) +
+  ## Add limits
+  ylim(8, 35)
+```
+
+## Simple slopes
+
+We calculate the simple slopes for the interaction effect
+
+```{r ss}
+### Calculate simple slopes
+## Specify model
+ss <- sim_slopes(mod_int_eff, 
+  ## Specify x-axis variable
+  pred = neuro_cent, 
+  ## Specify moderator variable
+  modx = sex)
+
+## examine simple slopes 
+ss
+
+### Plot simple slopes
+plot(ss)
+
+
+### Alternative 2D interaction plot
+## Choose data and mapping
+ggplot(sel_stud, aes(x = neuro_cent, y = ls.1, color = sex)) + 
+  ## Choose point geometry
+  geom_point() + 
+  ## Choose smooth geometry
+  geom_smooth(method = 'lm', formula = y ~ x, 
+              fullrange = F, se = T, 
+              aes(fill = sex)) +
+  ## Labels for plot components
+  labs(x = "Neuro", y = "Life Sat.",
+       fill = "Gender", color = "Gender") 
+
+### Calculating predicted values for different combination of predictor values
+mod_int_eff_pred <- as.data.frame(effect("neuro_cent:sex", mod_int_eff))
+
+## Examine results
+mod_int_eff_pred
+
+### Plot adjusted means and confidence intervals
+## Select data
+mod_int_eff_pred %>%
+  ## Choose values to plot
+  filter(neuro_cent == -1) %>%
+  ## Choose mapping
+  ggplot(aes(x = sex, y = fit)) + 
+    # Bar plot
+    geom_bar(stat = "identity", aes(fill = sex)) +
+    # Error bars
+    geom_errorbar(aes(ymin = lower, ymax = upper), 
+                  width = .2, position = position_dodge(.9)) +
+    # Labels
+    labs(x = "Gender", y = "Life Sat.", fill = "Gender")
+```
+
+## Your Turn!
+
+Estimate an interaction effect regression model by using _previous home_ and _awakeness_ (**at.1**) as predictors of life satisfaction (**ls.1** from **students**).  Mean center the continuous predictor, create a 2D interaction plot, and review the simple slopes.
+
+```{r yourTurn}
+
+```

@@ -1,0 +1,130 @@
+---
+title: "Moderated Regression with Continuous Predictors Assignment"
+author: "YOUR NAME HERE"
+date: "XX/XX/2021"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load Libraries
+
+We load the libraries we need for this script.  If your computer did not already install these packages, then you need to install them first.  To install packages, you can either: 
+
+1. type in your **Console** window _**install.packages("here")**_, or 
+2. select the **Tools** menu option followed by **Install Packages...**.
+
+```{r libraries, message=FALSE}
+### Load libraries for use in current working session
+## here for workflow
+library(here)
+
+## tidyverse for data manipulation and plotting
+# Loads eight different libraries simultaneously
+library(tidyverse)
+
+## broom to extract output from statistical models
+library(broom) 
+
+## plotly for 3D plotting
+library(plotly)
+
+## olsrr for regression diagnostics
+library(olsrr)
+
+## interactions to prepare 2D plot
+library(interactions) 
+
+## jtools to examine model results
+library(jtools)
+```
+
+## Load Data
+
+Load the _**students.RData**_ from the _**data**_ project directory folder.
+
+```{r data}
+## Load data via the here function
+load(here("data", "students.RData"))
+```
+
+## Regression Models
+
+Estimate regression models where procrastination (**proc**) is a function of awakeness (**at.1**) and conscientiousness (**consc**).  
+
+### Main Effects Regression Model
+
+Estimate a main effects (i.e., additive) regression model and review the results.
+
+```{r mainEffects}
+### Estimate model
+mod_main_eff <- lm(proc ~ at.1 + consc, data = students)
+
+## Review results
+summary(mod_main_eff)
+```
+
+### Interaction Effect Regression Model
+
+Estimate a main effects plus an interaction effect regression model and review the results.
+
+Use the *augment* function to create a new data object called **mod_int_eff_data** that contains the fitted and residual values of the model.  
+
+```{r intEffect}
+
+```
+
+### Compare Models
+
+Compare the main effects model and interaction effect model.
+
+```{r compMods}
+
+```
+
+### Multicollinearity
+
+Examine the extent of collinearity in the interaction effect model.
+
+```{r collinear}
+
+```
+
+### Centered Predictors
+
+Center your predictors to eliminate non-essential collinearity amongst predictors.
+
+```{r center}
+
+```
+
+### Regression Model with Centered Predictors
+
+Estimate an interaction effect regression model with centered predictors.  Examine the variance inflation factor to see if centering predictors eliminated non-essential collinearity
+
+```{r intEffCent}
+
+```
+
+### Create 2D Plot
+
+Use the **effects** package and **ggplot** to create a 2D plot. (use centered conscientiousness **consc_cent** as the x-axis variable (i.e., pred = consc_cent) and centered awakeness as the moderator variable (i.e., modx = at.1_cent))
+
+```{r plot2d}
+
+```
+
+### Calculate Simple Slopes
+
+Calculate the simple slopes between conscientiousness and procrastination for different levels of awakeness.
+
+```{r simpleSlopes}
+
+```

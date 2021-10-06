@@ -1,0 +1,274 @@
+---
+title: "Analytical Lecture on Moderated Regression with Continuous Predictors"
+author: "Jason Snyder"
+date: "XX/XX/2021"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load Libraries
+
+We load the libraries we need for this script.  If your computer did not already install these packages, then you need to install them first.  To install packages, you can either: 
+
+1. type in your **Console** window _**install.packages("here")**_, or 
+2. select the **Tools** menu option followed by **Install Packages...**.
+
+```{r libraries, message=FALSE}
+### Load libaries for use in current working session
+## here for workflow
+library(here)
+
+## tidyverse for data manipulation and plotting
+# Loads eight different libraries simultaneously
+library(tidyverse)
+
+## broom to extract output from statistical models
+library(broom) 
+
+## plotly for 3D plotting
+library(plotly)
+
+## olsrr for regression diagnostics
+library(olsrr)
+
+## interactions to prepare 2D plot
+library(interactions) 
+
+## jtools to examine model results
+library(jtools)
+```
+
+## Load Data
+
+We load _**students.RData**_ from the _**data**_ project directory folder.
+
+```{r data}
+## Load data via the here function
+load(here("data", "students.RData"))
+```
+
+## Regression Models
+
+We estimate regression models where life satisfaction (**ls.1**) is a function of mood (**gb.1**) and awakeness (**at.1**).  
+
+### Main Effects Regression Model
+
+We estimate a main effects (i.e., additive) regression model.
+
+```{r mainEffects}
+### Estimate model
+mod_main_eff <- lm(ls.1 ~ gb.1 + at.1, data = students)
+
+## Review results
+summary(mod_main_eff)
+```
+
+### Interaction Effect Regression Model
+
+We estimate a main effects plus an interaction effect regression model.
+
+```{r intEffect}
+### Estimate a model
+mod_int_eff <- lm(ls.1 ~ gb.1*at.1, data = students)
+
+## Review results
+summary(mod_int_eff)
+
+## Model fitted and residual values
+mod_int_eff_data <- augment(mod_int_eff, mod_int_eff$model)
+```
+
+### Compare Models
+
+We compare the main effects and interaction effect models.
+
+```{r compMods}
+### Calculate R-squared difference
+glance(mod_int_eff)$r.squared - glance(mod_main_eff)$r.squared
+
+## Nested models comparison
+anova(mod_main_eff, mod_int_eff)
+```
+
+### Create 3D Plot
+
+We plot the regression plane in 3D space.
+
+```{r regPlane, eval=FALSE}
+### Build the 3D scatterplot
+scatter3d <- plot_ly(data = mod_int_eff_data, x = ~gb.1, y = ~at.1, z = ~ls.1, 
+                     opacity = 0.6) %>% 
+  add_markers() %>% 
+  layout(scene = list(
+    xaxis = list(title = "Mood"),
+    yaxis = list(title = "Awake"),
+    zaxis = list(title = "LS")))
+
+### Make predictions from model
+## Extract unique values for predictors
+x_vals = seq(min(mod_int_eff_data$gb.1),max(mod_int_eff_data$gb.1),length.out = 50)
+y_vals = seq(min(mod_int_eff_data$at.1),max(mod_int_eff_data$at.1),length.out = 50)
+
+## Grid of predictor values
+pred_data <- expand.grid(x_vals, y_vals)
+
+# Name the columns of prediction grid
+names(pred_data) <- c("gb.1", "at.1")
+
+## Use regression model to generate prediction values
+fit_vals <- predict(mod_int_eff, newdata = pred_data)
+
+# Organize prediction values in a matrix
+plane <- matrix(fit_vals, nrow = length(y_vals), 
+                ncol = length(x_vals), byrow = T)
+
+## Check transformations
+# Regression plane
+plane[10, 17]
+
+# Fitted values
+fit_vals[467]
+
+# Regression equation
+coef(mod_int_eff)[1] + 
+  coef(mod_int_eff)[2]*pred_data[467, 1] + 
+  coef(mod_int_eff)[3]*pred_data[467, 2] + 
+  coef(mod_int_eff)[4]*pred_data[467, 1]*pred_data[467, 2]
+
+### Plot regression plane
+## Start with scatterplot
+scatter3d_plane <- scatter3d %>% 
+  ## Add regression plane
+  add_surface(x = ~x_vals, y = ~y_vals, z = ~plane, showscale = T) %>% 
+  ## Title for color scale 
+  colorbar(title = "LS")
+
+# Display plot
+scatter3d_plane
+```
+
+
+### Multicollinearity
+
+We examine the extent of collinearity in the interaction effect model.
+
+```{r collinear}
+### Examine correlations
+## Choose data
+mod_int_eff_data %>%
+  ## Select variables
+  select(gb.1, at.1) %>%
+  ## Calculate interaction variable
+  mutate(gb_at_int = gb.1*at.1) %>%
+  ## Correlate
+  cor()
+
+### Examine variance inflation factor
+ols_coll_diag(mod_int_eff)$vif_t
+```
+
+### Centered Predictors
+
+We center predictors to eliminate non-essential collinearity amongst predictors.
+
+```{r center}
+### Center predictors
+## Overwrite data
+mod_int_eff_cent_data <- mod_int_eff_data %>%
+  ## Compute centered variables
+  # Select variables
+  mutate_at(vars(gb.1, at.1), 
+            # Center variables
+            list(cent = ~ . - mean(.))) %>%
+  ## Rename ID variable
+  rename(id = .rownames) %>%
+  ## Select variables
+  select(id, ls.1, gb.1_cent, at.1_cent)
+```
+
+### Regression Model with Centered Predictors
+
+We estimate an interaction effect regression model with centered predictors.
+
+```{r intEffCent}
+### Estimate regression model
+mod_int_eff_cent <- lm(ls.1 ~ gb.1_cent*at.1_cent, data = mod_int_eff_cent_data)
+
+## Review results
+summary(mod_int_eff_cent)
+
+### Fitted and residual values
+mod_int_eff_cent_data <- augment(mod_int_eff_cent, mod_int_eff_cent_data)
+
+### Examine correlations
+## Choose data
+mod_int_eff_cent_data %>%
+  ## Select variables
+  select(gb.1_cent, at.1_cent) %>%
+  ## Calculate interaction variable
+  mutate(gb_at_int = gb.1_cent*at.1_cent) %>%
+  ## Correlate
+  cor()
+
+### Examine variance inflation factor after centering predictors
+ols_coll_diag(mod_int_eff_cent)$vif_t
+```
+
+### Create 2D Plot
+
+We use the **effects** package and **ggplot** to create a 2D plot.
+
+```{r plot2d}
+### Examine results with summ() from jtools package
+summ(mod_int_eff_cent)
+
+### Produce 2D interaction plot
+## Specify model
+interact_plot(mod_int_eff_cent, 
+  ## Specify x-axis variable
+  pred = gb.1_cent, 
+  ## Specify moderator variable
+  modx = at.1_cent,
+  ## Include points
+  plot.points = TRUE,
+  ## Labels
+  x.label = "Mood", y.label = "Life Satisfaction", legend.main = "Awake",
+  ## Colors
+  colors = c("red", "blue", "green"))
+```
+
+### Calculate Simple Slopes
+
+We calculate the simple slopes between mood and life satisfaction for different levels of awakeness.
+
+```{r simpleSlopes}
+### Calculate simple slopes
+## Specify model
+ss <- sim_slopes(mod_int_eff_cent, 
+  ## Specify x-axis variable
+  pred = gb.1_cent, 
+  ## Specify moderator variable
+  modx = at.1_cent)
+
+### Examine simple slopes
+ss
+
+### Plot simple slopes
+plot(ss)
+```
+
+## Your Turn!
+
+Estimate an interaction effect regression model by using mood and awakeness as predictors of procrastination (**proc** from **students**).  Mean center the predictors, create a 2D interaction plot, and review the simple slopes.
+
+```{r yourTurn}
+
+```

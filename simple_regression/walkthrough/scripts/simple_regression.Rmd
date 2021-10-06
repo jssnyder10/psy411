@@ -1,0 +1,302 @@
+---
+title: "Simple Regression"
+author: "YOUR NAME HERE"
+date: "XX/XX/21"
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+editor_options:
+  chunk_output_type: console
+---
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document.
+
+## Default Options
+
+R Markdown works by typing regular text such as these words to describe **code chunks** you will execute.  A code chunk begins and ends with three back ticks.  With the opening three back ticks, you write: 
+
+1. the type of code you will write (e.g., _**r**_), 
+2. code chunk name if you wish, 
+3. code chunk options.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load Libraries
+
+Here we load the libraries we need for this script.  If your computer did not already install these packages, then you need to install them first.  To install packages, you can either: 
+
+1. type in your **Console** window _**install.packages("tidyverse")**_, or 
+2. select the **Tools** menu option followed by **Install Packages...**.
+
+```{r libraries, message=FALSE}
+### Load libaries for use in current working session
+## here for project work flow
+library(here)
+
+## tidyverse for data manipulation and plotting
+# Loads eight different libraries simultaneously
+library(tidyverse)
+
+## GGally to extend ggplot2 capabilities
+library(GGally)
+
+## psych for correlation matrices
+library(psych)
+
+## broom to extract output cleanly from many statistical models including "lm"
+library(broom) 
+
+## knitr to produce pleasing tables
+library(knitr) 
+```
+
+## Load Data
+
+We set our working directory and load the _**simple_regression**_ data file from the working directory.
+
+```{r data}
+## use read_csv() and here() to import the data file
+data <- read_csv(
+  ## use here() to locate file in our project directory
+  here("data", "covid_depaul.csv")
+)
+```
+
+## Examine Data with Functions
+
+Once you load in any data, then you will want to examine to check its basic features.  One way to do this in **RStudio** is by examining the data using the **Environment** window.  Alternatively, you can examine the data with the use of _R_ functions.
+
+```{r structure}
+## Examine the structure of your data
+str(data)
+
+# glimpse to preview the data
+glimpse(data)
+
+## Examine the top and bottom of a data object
+# Use head function for the top of the data
+head(data, n = 8)
+
+# Use tail function for the bottom of the data
+tail(data, n = 15)
+
+```
+
+## Scatterplots
+
+We will generally use **ggplot2** functions or their extensions to produce plots. We produce a scatterplot for two variables.
+
+```{r scatterplot}
+### A minimally specified scatterplot using ggplot
+## Specify the data and aesthetics
+ggplot(data = data, mapping = aes(x = Popnsize, y = totalcases)) +
+  ## Specify the geometry
+  geom_point()
+
+### A scatterplot with more specifications
+## Specify the data and aesthetics
+plot_1 <- ggplot(data = data, mapping = aes(x = Popnsize, y = totalcases)) +
+  ## Specify the geometry with a color and shape
+  geom_point(color = "red", shape = 18) +
+  ## Set x-axis limits
+  xlim(0, 50000000) +
+  ## Set y-axis limits
+  ylim(0, 2000000) +
+  ## Change x-axis label
+  xlab("Population size")
+
+# display plot
+plot_1
+
+### save plots to folder in project directory
+## save a single plot to a file
+ggsave(
+  ## file path
+  here("plots", "plot_1.png"), 
+  ## plot object
+  plot = plot_1,
+  ## dimensions
+  units = "in", width = 9, height = 6
+)
+```
+
+## Your Turn! 
+
+In the empty code chunk, create a scatterplot with **Total cases** on the x-axis and **population size** on the y-axis.
+
+Note: these Your Turn sections are purely for practice purposes
+
+```{r your_turn_scatterplot}
+
+```
+
+
+## Scatterplot Matrix
+
+We produce a scatterplot matrix in two ways:  
+
+1. We use _**ggpairs**_ from **GGally**,
+2. We select data with **dplyr**, and, then, plot.
+
+```{r scatterplot_matrix}
+### Use ggpairs function from GGally library
+## Select desired columns
+ggpairs(data = data, columns = 6:8)
+
+### dplyr 
+## We use the pipe, %>%, operator here,
+## which passes information along to the next function
+# Specify the data object
+data %>%
+  # Select variables
+  select(Popnsize, totalcases, totaltest) %>%
+  # Produce plot
+  ggpairs()
+
+
+## We can also use corr.test to get just a correlation matrix if we wish
+
+# Specify the data object
+  data %>%
+  # Select variables
+  select(Popnsize, totalcases, totaltest) %>%
+  # Produce correlation matrix and significance tests
+  corr.test()
+```
+
+## Fitting a Linear Model
+
+We fit a simple linear regression model with _**lm**_, and we examine the results.
+
+```{r lm}
+### Linear models
+## Linear model with unstandardized variables
+myMod <- lm(totalcases ~ Popnsize, data = data)
+
+## Linear model with standardized variables 
+myModZ <- lm(scale(totalcases) ~ scale(Popnsize), data = data)
+```
+
+## Examine Results
+
+We examine results with base functions, and, then, with functions from **broom**.
+
+```{r lm_results}
+#### Show output
+### Reduced base output
+## Undstandardized model
+myMod
+
+## Standardized model
+myModZ
+
+### Extended base output
+## Unstandardized model
+summary(myMod)
+
+## Standardized model
+summary(myModZ)
+
+### Using broom for output
+## Overall summary statistics for the model
+# Unstandardized model
+glance(myMod) 
+
+# Standardized model
+glance(myModZ)
+
+## Regression coefficients for the model
+# Unstandardized model
+tidy(myMod)
+
+# Standardized model
+tidy(myModZ)
+```
+
+## Fitted and Residual Values
+
+We examine fitted and residual values via base functions, and, then, with the _**augment**_ function from **broom**.
+
+```{r augment}
+### Base functions
+## Fitted values for unstandardized model
+fitted(myMod)
+
+## Residual values for unstandardized model
+resid(myMod)
+
+### Using broom for fitted and residual values
+## Save calculations into data object
+dataAug <- augment(myMod, data)
+
+## Examine specific rows and variables of the augmented data
+# Select data
+dataAug %>%
+  # Choose specific rows
+  slice(c(1:5, 20, 24:30, 33, 40, 45:50)) %>%
+  # Select specific variables
+  select(States, .fitted, .resid) %>%
+  # Print the table
+  kable(caption = "Augmented Data", digits = 2)
+```
+
+
+## Your Turn! 
+
+Estimate the unstandardized regression model with **population size** as the criterion and **total cases** as the predictor.  Name the _**lm**_ object **myMod2**.  Use **broom** to look at the overall model summary and regression coefficients.  Augment the data, and save the augmented data as a new object **datAug2**. 
+
+Note: these Your Turn sections are purely for practice purposes
+
+```{r your_turn_lm}
+
+```
+
+## Scatterplot with Regression Line
+
+We produce scatterplot with a fitted regression line simply using _**ggplot**_ functionalities.
+
+```{r reg_plot}
+### Produce the plot
+## Save the plot as object
+# Specify data and aesthetics
+regPlot <- ggplot(data = dataAug, aes(x = Popnsize, y = totalcases)) +
+  # Specify point geometry for scatterplot
+  geom_point(shape = 1) +
+  # Specify smooth geometry for regression line
+  geom_smooth(method = "lm", se = F, col = "green") +
+  # Specify horizontal line to represent mean value on criterion
+  geom_hline(aes(yintercept = mean(totalcases)), lty = 2, col = "blue") +
+  # Specify smooth geometry for loess line
+  geom_smooth(method = "loess", se = F, col = "red")
+
+### Display regression plot
+regPlot
+
+### save plots to folder in project directory
+## save a single plot to a file
+ggsave(
+  ## file path
+  here("plots", "regPlot.png"), 
+  ## plot object
+  plot = regPlot,
+  ## dimensions
+  units = "in", width = 9, height = 6
+)
+```
+
+## Your Turn! 
+
+Create a similar ggplot with population size as the criterion and total cases as the predictor.
+
+Note: these Your Turn sections are purely for practice purposes
+```{r your_turn_reg_plot}
+
+```
+

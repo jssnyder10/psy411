@@ -1,0 +1,112 @@
+---
+title: "Logistic Regression Template"
+author: "YOUR NAME HERE"
+date: "XX/XX/2021"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load Libraries
+
+We load the libraries we need for this script.  If your computer did not already install these packages, then you need to install them first.  To install packages, you can either: 
+
+1. type in your **Console** window _**install.packages("here")**_, or 
+2. select the **Tools** menu option followed by **Install Packages...**.
+
+```{r libraries, message=FALSE}
+### Load libaries for use in current working session
+## here for workflow
+library(here)
+
+## tidyverse for data manipulation and plotting
+# Loads eight different libraries simultaneously
+library(tidyverse)
+
+## broom to extract output from statistical models
+library(broom) 
+
+## aod for statistical tests
+library(aod)
+
+## descr for statistical tests
+library(descr)
+```
+
+## Load Data
+
+Load the _**school.RData**_ from the _**data**_ project directory folder.
+
+```{r data}
+
+```
+
+## Simple Logistic Regression
+
+First, you will examine the probability of _graduate school admittance_ as a function of _GRE score_.
+
+Check the contrasts of the *admit* variable to make sure that the *no* category is coded with a value of 0 and the *yes* category is coded with a value of 1.
+
+Estimate a simple logistic regression model where *admit* is predicted by *gre*.  Set *data = school* and *family = "binomial"*.  Name the model *simp_mod*
+
+use the _summary()_ function on *simp_mod* to examine the results
+
+convert the coefficients to odds ratios and then convert the odds ratios to percent multiplicative increase
+
+Lastly, use the _LogRegR2()_ function to perform a likelihood ratio test on the model and evaluate whether the deviance of our model is significantly lower than the deviance of the null model (i.e., evaluate whether our model fits the data better than the null model)
+
+```{r simpLog}
+
+```
+
+## Save prediction and graph
+
+Now you will save the various predictions from the model back into the data and use them to create a plot.
+
+Begin by creating a new object called *school_simp_aug* by using the _augment()_ function on *simp_mod*.
+
+Next, create a new variable in the *school* data called *simp_logit* (i.e., *school$simp_logit* <-) by using _predict()_ on *simp_mod*.  This will save the logit predictions from the model back into the data.
+
+Create another new variable in the *school* data called *simp_odds* by wrapping *predict(simp_mod)* in the _exp()_ function (i.e., *exp(predict(simp_mod))*).  This will save the odds ratios computed from the model back into the data.
+
+Create one last variable in the *school* data called *simp_prob* by using the _fitted()_ function on *simp_mod*.  This will save the probability values computed by the model back into the data.
+
+Use _ggplot()_ to visualize the regression model.  Set the first input to *school*, the aesthetic mapping of the x axis to gre and the aesthetic mapping of the y axis to the numeric value of *admit* - 1 (i.e., *as.numeric(admit) - 1*).
+On a new layer, inside of _geom_point_ set *alpha = 0.5*
+On a new layer, inside of _geom_smooth_ set *method = "glm"*, *se = TRUE*, and *method.args = list(family = "binomial")*
+On a new layer, properly label the x and y axis
+
+```{r predict}
+
+```
+
+## Accuracy of predictions and accuracy computations
+
+Now you will find the accuracy of the model with respect various prediction categorizations (e.g., true positives, true negatives, etc.) and compute accuracy metrics (e.g., overall accuracy, positive accuracy, negative accuracy, etc.)
+
+Create a new object called *acc_simp_mod* by piping *school* into _summarize()_ and creating four variables.  
+Create a variable called *tp* that is the sum of cases where *simp_prob >= 0.4 & admit == "Yes"*
+Create another variable called *tn* that is the sum of cases where *simp_prob < 0.4 & admit == "No"*
+Create another variable called *fp* that is the sum of cases where *simp_prob >= 0.4 & admit == "No"*
+Create one last variable called *fn* that is the sum of cases where *simp_prob < 0.4 & admit == "Yes"*
+
+*Be sure to capitalize "Yes" and "No" when creating each of these variables -- otherwise R will not compute the correct metrics*
+
+Lastly you will summarize the accuracy computations
+Pipe *acc_simp_mod* into the _summarize()_ function and create five new variables
+Create a variable called *overall* that is equal to *(tp + tn)/(tp + tn + fp + fn)*
+Create another variable called *positive* that is equal to *tp/(tp + fp)*
+Create another variable called *negative* that is equal to *tn/(tn + fn)*
+Create another variable called *sensitivity* that is equal to *tp/(tp + fn)*
+Create one last variable called *specificity* that is equal to *tn/(tn + fp)*
+
+```{r}
+
+```

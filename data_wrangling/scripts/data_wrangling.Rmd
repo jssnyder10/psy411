@@ -1,0 +1,264 @@
+---
+title: "tidyverse data wrangling"
+author: "YOUR NAME HERE"
+date: "xx/xx/2021"
+output:
+  pdf_document: default
+  html_document: default
+editor_options:
+  chunk_output_type: console
+---
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+## Default Options
+
+R Markdown works by typing regular text such as these words to describe **code chunks** you will execute.  A code chunk begins and ends with three back ticks.  With the opening three back ticks, you write: 
+
+1. the type of code you will write (e.g., _**r**_), 
+2. code chunk name if you wish, 
+3. code chunk options.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load Libraries
+
+Here we load the libraries we need for this script.  If your computer did not already install these packages, then you need to install them first.  To install packages, you can either: 
+
+1. type in your **Console** window _**install.packages("tidyverse")**_, or 
+2. select the **Tools** menu option followed by **Install Packages...**.
+
+```{r, libraries, message=FALSE}
+## here for project work flow
+library(here)
+
+## tidyverse for data manipulation and plotting
+# Loads eight different libraries simultaneously
+library(tidyverse)
+
+## GGally to extend ggplot2 capabilities
+library(GGally)
+
+## knitr to produce pleasing tables
+library(knitr)
+```
+
+## Load Data
+
+We set our working directory and load the _**covid_depaul**_ data file from the working directory.
+
+```{r data}
+### import data objects
+## use read_csv() and here() to import the data file
+data <- read_csv(
+  ## use here() to locate file in our project directory
+  here("data", "covid_depaul.csv")
+)
+```
+
+## Examine Data with Functions
+
+Once you load in any data, then you will want to examine to check its basic features.  One way to do this in **RStudio** is by examining the data using the **Environment** window.  Alternatively, you can examine the data with the use of _R_ functions.
+
+```{r structure}
+## List objects in your global environment
+ls()
+
+## Examine the structure of your data
+str(data)
+
+#glimpse gives a comprehensive preview of the data
+glimpse(data)
+
+## Print variable or row names of a data object
+# Variable names
+names(data)
+
+# Row names
+row.names(data)
+
+## Examine the top and bottom of a data object
+# Use head function for the top of the data
+head(data, n = 8)
+
+# Use tail function for the bottom of the data
+tail(data, n = 15)
+
+## Select specific columns or rows
+# Select columns by number
+data[, 2:3]
+
+# Select columns by name
+data[, c("States", "totalcases")]
+
+# Select rows by number
+data[c(9, 5, 12), ]
+
+# Select rows by name
+data[c("8", "36", "27"), ]
+```
+
+## Manipulating data with tidyverse packages
+
+After you have loaded in your data and checked its basic properties, you are now ready to begin manipulating your data.  The process of cleaning and manipulating data is known as data wrangling.  Here we will use the various packages and functions included in the *tidyverse* package to manipulate our data for analysis.
+
+We will mainly be using the functions available in the **dplyr** package.  This script will demonstrate various uses of the **select**, **filter**, and **mutate** functions.
+
+### dplyr *select* function
+
+## We can create new data objects that consist of only the variables that we are interested in analyzing
+## For instance, we can create a data object that includes only population size, number of cases, number of deaths, and number of tests
+
+```{r select}
+# Specify name of new data object
+newdata <- 
+## We use the pipe, %>%, operator here,
+## which passes information along to the next function  
+  data %>%
+  # Select variables
+  select(Popnsize, totalcases, totaldeaths, totaltest)
+
+# Now we can use this new object for analyses.  For example, we can produce a useful plot with the ggpairs function
+ggpairs(newdata)
+```
+
+### dplyr *filter* function
+
+## We can also use the *filter* function from dplyr to create new data objects that filter the data based on certain specifications
+## For example, we can use *filter* to create a new data frame that only includes states with Democratic governors
+
+```{r filter}
+# Specify name of new data object
+DemGov <- 
+## We use the pipe, %>%, operator here,
+## which passes information along to the next function
+  data %>%
+  filter(Party #specify variable
+         == "1") #provide value
+
+
+## Alternatively, we can use the *!=* operator to filter out specific values and get the same results
+
+# Specify name of new data object
+DemGov2 <- 
+## We use the pipe, %>%, operator here,
+## which passes information along to the next function
+  data %>%
+  filter(Party #specify variable
+         != "0") #provide value
+
+## The first method is the equivalent of saying "only include cases where Party is equal to 1" and the second method is the equivalent of saying "include all cases where Party is not equal to 0" 
+
+## The second method is useful when you have categorical variables with more than two categories and you would like to exclude only one category
+
+
+## Filter also works with continuous variables
+## For example, we can include only states that have a large population size (i.e., states with populations greater than 5 million people)
+
+# Specify name of new data object
+LargePop <- 
+## We use the pipe, %>%, operator here,
+## which passes information along to the next function
+  data %>%
+  filter(Popnsize #specify variable
+         > 5000000) #provide value
+
+
+
+## You can also filter by multiple specifications (using the & and | symbols for AND and OR) at the same time
+## For instance, we can filter to include states that have large populations AND Republican governors
+
+# Specify name of new data object
+LargePopRepub <-
+## We use the pipe, %>%, operator here,
+## which passes information along to the next function  
+  data %>% 
+  filter(Popnsize > 5000000 #specify variable and provide value
+         & Party == "0") #specify variable and provide value 
+
+## We can also use | to specify OR
+## For instance, we can filter to include states that have Democratic OR female governors
+
+# Specify name of new data object
+DemFemGov <-
+## We use the pipe, %>%, operator here,
+## which passes information along to the next function  
+  data %>% 
+  filter(Party == "1" #specify variable and provide value
+         | Sexgov == "1") #specify variable and provide value
+```
+
+
+## We can also combine the select and filter functions using pipe operators (%>%) to neatly manipulate our data (Starting to see why it's called *tidyverse* yet? ;) )
+
+## For example, we can select only population size, Party of governor, number of cases, number of deaths, and number of tests and then filter by party of the governor
+
+```{r combine}
+# Specify name of new data object
+DemGovSelect <-
+  data %>% 
+  #select our variables
+  select(Popnsize, Party, totalcases, totaldeaths, totaltest) %>% 
+  #filter to include only states with Democratic governors
+  filter(Party == "1")
+```
+
+### dplyr **mutate** function
+## The **mutate** function allows us to create/compute new variables.  
+## For example, let's say we wanted to dichotomize nursing beds per 100,000 people based on the median
+## (generally, you don't want to dichotomize continuous variables, but bear with me)
+
+```{r mutate}
+# We can find the median value...
+median(data$Hospperthou)
+
+#...and use that to create a categorical variable (either "low" or "high") hospital bed capacity
+
+# We want to add our new variable back to our existing data
+data <-
+  data %>% 
+  mutate(hospperthou_cat #we specify the name of our new variable
+         = if_else(Hospperthou < 545, 0, 1)) #if_else allows us to set up a logical test to assign new values.  States with a Hospperthou value less than 545 will be assigned a value of 0 on the new variable and states with a Hospperthou value greater than 545 will be assigned a value of 1 on the new variable
+
+# Now we can relabel 0 and 1 to "low capacity" or "high capacity" respectively
+
+#relabel new condition variable
+data$hospperthou_cat <- factor(data$hospperthou_cat, 
+                               levels = c(0, 1),
+                               labels = c("low capacity", "high capacity"))
+
+
+## if_else is only one very basic use of the **mutate** function, the function can handle many different types of operations such summing, subtracting, and multiplying variables
+
+```
+
+
+## Your Turn!
+
+These Your Turn sections are purely for practice purposes.
+
+For each of the following, create a new data frame that...
+
+1.  includes only the variables for cases per population, tests per population, and deaths per population
+
+2.  includes only states with female governors
+
+3.  includes only states who have an average temperature above 50 degrees
+
+4.  includes only states with Republican governors AND that have an average age that is less than 39
+
+5.  includes only states with Democratic governors OR that are in the Northern region (i.e., where Region = 1)
+
+6.  includes only the variables for sex of governor, cases per population, tests per population, and deaths per population only for states with female governors
+
+```{r your_turn}
+
+```
+
+

@@ -1,0 +1,123 @@
+---
+title: "Simple Mediation assignment template"
+author: "YOUR NAME HERE"
+date: "XX/XX/2021"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load Libraries
+
+We load the libraries we need for this script.  If your computer did not already install these packages, then you need to install them first.  To install packages, you can either: 
+
+1. type in your **Console** window _**install.packages("here")**_, or 
+2. select the **Tools** menu option followed by **Install Packages...**.
+
+```{r libraries, message=FALSE}
+### Load libaries for use in current working session
+## here for workflow
+library(here)
+
+## tidyverse for data manipulation and plotting
+# Loads eight different libraries simultaneously
+library(tidyverse)
+
+## broom to extract output from statistical models
+library(broom) 
+
+## mediation for mediation models
+library(mediation) 
+```
+
+## Load Functions
+
+We load user-defined functions: **simpMedBoot** and **simpMedCarlo**.  These functions execute bootstrapping and Monte Carlo estimation for simple mediation models.
+
+```{r functions}
+### Source functions
+source(here("scripts", "simple_mediation_functions.R"))
+```
+
+## Load Data
+
+Load _**students.csv**_ from the _**data**_ project directory folder.
+
+```{r data}
+
+```
+
+## Baron and Kenny Approach
+
+Evaluate the following mediation hypothesis using the Baron and Kenny Approach:
+
+_The effect of neuroticism (**neuro**) on life satisfaction (**ls.1**) is mediated by mood (**gb.1**)._
+
+Create a new object called *sel_stud* that consists of only the complete cases of the variables life satisfaction, neuroticism, and mood
+
+Estimate the c path regression model where life satisfaction (**ls.1**) is predicted by neuroticism (**neuro**).  Name this model object *m_1*
+
+Estimate the a path regression model where mood (**gb.1**) is predicted by neuroticism (**neuro**).  Name this model object *m_2*
+
+Estimate the b and c' path regression model where life satisfaction (**ls.1**) is predicted by neuroticism (**neuro**) and mood (**gb.1**).  Name this model object *m_3*
+
+Apply the _summary_ function to each of the model objects to inspect which paths in the mediation model are significant
+
+```{r baronKenny}
+
+```
+
+## Mediation Package
+
+Using Monte Carlo estimation, estimate coefficients for the aforementioned simple mediation model using the **mediation** package.
+
+Set your computer's random seed to 345 (i.e., *set.seed(345)*)
+
+Create a model object for the mediator model where mood (**gb.1**) is predicted by neuroticism (**neuro**).  Name the object med_mod
+
+Create a model object for the outcome model where life satisfaction (**ls.1**) is predicted by neuroticism (**neuro**) and mood (**gb.1**).  Name the object out_mod
+
+Apply the _summary_ function to both of the model objects to inspect which paths are significant
+
+Next, estimate the mediation effect using **Monte Carlo** estimation using the _mediate_ function from the **mediation** package
+
+Inside the _mediate_ function, specify *med_mod* and *out_mod* as the first and second inputs, *neuro* as the treat variable and *gb.1* as the mediator variable. Name the model object *output_med_carlo* 
+
+Apply _summary_ and _plot_ to *output_med_carlo* to inspect and plot the mediation effects, respectively
+
+```{r mediation}
+
+```
+
+## Monte Carlo Estimation
+
+Create a plot for the estimated _Monte Carlo_ coefficients for the aforementioned simple mediation model using the user-defined function: **simpMedCarlo**.
+
+Set your computer's random seed to 345 (i.e., *set.seed(345)*)
+
+Use the _replicate_ function to produce 1000 estimates.  Also inside of _replicate_, call the _simpMedCarlo_ function and specify the a, b, cp, se_a, se_b, and se_cp coefficients (*hint*: you do not need to change any of these from what is included in the walkthrough script).  Set simplify = F and pipe into the _bind_rows_ function.  Name the object *output_carlo*.
+
+Create an object called *carlo_ci_res* by creating a data frame using the _map_ function.  Inside of _map_ specify the model input as *output_carlo* and define the anonymous function as ndx (i.e., *function(ndx)*).  For the contents of the anonymous function, call _quantile_ and set the first input to ndx, and request the 2.5th, 50th, and 97.5th percentiles (i.e., probs = c(0.025, 0.5, 0.975)) 
+
+Lastly, use *ggplot* to create a density plot of the indirect effect.  Inside of *ggplot*, set the first input to *output_carlo* and map *ab_carlo* to the aestethic for the x-axis.  
+
+Add a new layer for a density plot that uses _geom_histogram_ with *..density..* mapped to the aesthetic for the y-axis.  Set the color to black, fill to white, and bins = 40
+
+Add another layer for the density curve that uses _geom_density_.  Set the fill to the hexadecimal value #FF6666 and the alpha value to 0.2
+
+Add vertical lines for the for the quantiles with _geom_vline_.  Specify the data as *carlo_ci_res* and the aesthetic mapping for the xintercept = ab_carlo.  Set the color to blue, the linetype to dashed, and size = 1
+
+Add a final layer using _geom_text_ to specify the labels for the vertical lines.
+
+*Hint*: All of the code for this ggplot is the same as the code for the plot in the walkthrough script
+
+```{r monteCarlo}
+
+```

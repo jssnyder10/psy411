@@ -1,0 +1,417 @@
+---
+title: "Moderated Mediation Walkthrough"
+author: "Jason Snyder"
+date: "XX/XX/2021"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load Libraries
+
+We load the libraries we need for this script.  If your computer did not already install these packages, then you need to install them first.  To install packages, you can either: 
+
+1. type in your **Console** window _**install.packages("here")**_, or 
+2. select the **Tools** menu option followed by **Install Packages...**.
+
+```{r libraries, message=FALSE}
+### Load libaries for use in current working session
+## here for workflow
+library(here)
+
+## tidyverse for data manipulation and plotting
+# Loads eight different libraries simultaneously
+library(tidyverse)
+
+## broom to extract output from statistical models
+library(broom) 
+
+## mediation for mediation models
+library(mediation) 
+```
+
+## Load Data
+
+We load _**students.RData**_ from the _**data**_ project directory folder.
+
+```{r data}
+## Load data via the here function
+load(here("data", "students.RData"))
+```
+
+## Wrangle Data
+
+We wrangle the loaded data to prepare for analyses.
+
+```{r dataWrangle}
+### Create desired data
+## Write new data object
+sel_stud <- students %>%
+  ## Select variables
+  dplyr::select(ls.1, consc, proc, sex, age) %>%
+  ## Keep only complete cases
+  na.omit()
+
+### Center continuous predictor variables
+## Add variables to data object
+sel_stud <- sel_stud %>%
+  ## Create new variables
+  # Select variables
+  mutate_at(vars(ls.1, proc, consc, age), 
+          # Create function
+          list(cent = ~ . - mean(.)))
+```
+
+## Moderated Mediation Model 1
+
+We estimate the moderated mediation model where **proc_cent** mediates the relationship between **consc_cent** and **ls.1_cent** and **consc_cent** moderates the path from **proc_cent** to **ls.1_cent**.
+
+```{r modMed1}
+### Mediator model
+med_mod_1 <- lm(proc_cent ~ consc_cent, data = sel_stud)
+
+### Outcome model
+out_mod_1 <- lm(ls.1_cent ~ consc_cent*proc_cent, data = sel_stud)
+
+### Examine results on original sample
+## Mediator model
+summary(med_mod_1)
+
+## Outcome model
+summary(out_mod_1)
+
+### Estimate moderated mediation via bootstrap or Monte Carlo sampling
+## Specify regression models
+output_1 <- mediate(med_mod_1, out_mod_1, 
+  ## Specify variables
+  treat = "consc_cent", mediator = "proc_cent", 
+  ## Specify simulation options
+  boot = F, sims = 1000, boot.ci.type = "bca", 
+  ## Specify moderator values
+  control.value = -sd(sel_stud$consc_cent), treat.value = sd(sel_stud$consc_cent))
+
+## Examine results
+summary(output_1)
+
+## Plot results
+plot(output_1)
+```
+
+## Moderated Mediation Model 2
+
+We estimate the moderated mediation model where **proc_cent** mediates the relationship between **consc_cent** and **ls.1_cent** and **sex** moderates the path from **consc_cent** to **proc_cent**.
+
+```{r modMed2}
+### Mediator model
+med_mod_2 <- lm(proc_cent ~ consc_cent*sex, data = sel_stud)
+
+### Outcome model
+out_mod_2 <- lm(ls.1_cent ~ consc_cent*sex + proc_cent, data = sel_stud)
+
+### Examine results on original sample
+## Mediator model
+summary(med_mod_2)
+
+## Outcome model
+summary(out_mod_2)
+
+### Estimate moderated mediation
+## Model for females
+output_2_f <- mediate(med_mod_2, out_mod_2, 
+  ## Specify variables
+  treat = "consc_cent", mediator = "proc_cent", 
+  ## Specify simulation options
+  boot = F, sims = 1000, boot.ci.type = "bca", 
+  ## Specify moderator values
+  covariates = list(sex = "female"))
+
+## Model for males
+output_2_m <- mediate(med_mod_2, out_mod_2, 
+  ## Specify variables
+  treat = "consc_cent", mediator = "proc_cent", 
+  ## Specify simulation options
+  boot = F, sims = 1000, boot.ci.type = "bca", 
+  ## Specify moderator values
+  covariates = list(sex = "male"))
+
+## Examine results
+# Model for females
+summary(output_2_f)
+
+# Model for males
+summary(output_2_m)
+
+### Test statistical significance of indirect effect between values on the moderator
+## Set model without covariates specification
+output_2 <- mediate(med_mod_2, out_mod_2, 
+  ## Specify variables
+  treat = "consc_cent", mediator = "proc_cent", 
+  ## Specify simulation options
+  boot = F, sims = 1000, boot.ci.type = "bca")
+
+## Perform statistical test
+# Specify model
+test.modmed(output_2, 
+  # Specify covariates lists
+  covariates.1 = list(sex = "female"), 
+  covariates.2 = list(sex = "male"))
+```
+
+## Moderated Mediation Model 3
+
+We estimate the moderated mediation model where **proc_cent** mediates the relationship between **consc_cent** and **ls.1_cent** and **sex** moderates the path from **proc_cent** to **ls.1_cent**.
+
+```{r modMed3}
+### Mediator model: must include sex as a control even though it is not predicting proc in the path diagram
+med_mod_3 <- lm(proc_cent ~ consc_cent + sex, data = sel_stud)
+
+### Outcome model
+out_mod_3 <- lm(ls.1_cent ~ consc_cent + proc_cent*sex, data = sel_stud)
+
+### Examine results on original sample
+## Mediator model
+summary(med_mod_3)
+
+## Outcome model
+summary(out_mod_3)
+
+### Estimate moderated mediation
+## Model for females
+output_3_f <- mediate(med_mod_3, out_mod_3, 
+  ## Specify variables
+  treat = "consc_cent", mediator = "proc_cent", 
+  ## Specify simulation options
+  boot = F, sims = 1000, boot.ci.type = "bca", 
+  ## Specify moderator values
+  covariates = list(sex = "female"))
+
+## Model for males
+output_3_m <- mediate(med_mod_3, out_mod_3, 
+  ## Specify variables
+  treat = "consc_cent", mediator = "proc_cent", 
+  ## Specify simulation options
+  boot = F, sims = 1000, boot.ci.type = "bca", 
+  ## Specify moderator values
+  covariates = list(sex = "male"))
+
+## Examine results
+# Model for females
+summary(output_3_f)
+
+# Model for males
+summary(output_3_m)
+
+### Test statistical significance of indirect effect between values on the moderator
+## Set model without covariates specification
+output_3 <- mediate(med_mod_3, out_mod_3, 
+  ## Specify variables
+  treat = "consc_cent", mediator = "proc_cent", 
+  ## Specify simulation options
+  boot = F, sims = 1000, boot.ci.type = "bca")
+
+## Perform statistical test
+# Specify model
+test.modmed(output_3, 
+  # Specify covariates lists
+  covariates.1 = list(sex = "female"), 
+  covariates.2 = list(sex = "male"))
+```
+
+## Moderated Mediation Model 4
+
+We estimate the moderated mediation model where **proc_cent** mediates the relationship between **consc_cent** and **ls.1_cent** and **sex** moderates the path from **consc_cent** to **proc_cent** and **age_cent** moderates the path from **proc_cent** to **ls.1_cent**.
+
+```{r modMed4}
+### Mediator model: for the same reason as model 3, age is included even though it is not a predictor in the path diagram
+med_mod_4 <- lm(proc_cent ~ consc_cent*sex + age_cent, data = sel_stud)
+
+### Outcome model: Sex is also included in this model for the same reason
+out_mod_4 <- lm(ls.1_cent ~ consc_cent*sex + proc_cent*age_cent, data = sel_stud)
+
+### Examine results on original sample
+## Mediator model
+summary(med_mod_4)
+
+## Outcome model
+summary(out_mod_4)
+
+### Estimate moderated mediation
+## Model for females
+output_4_f <- mediate(med_mod_4, out_mod_4, 
+  ## Specify variables
+  treat = "consc_cent", mediator = "proc_cent", 
+  ## Specify simulation options
+  boot = F, sims = 1000, boot.ci.type = "bca", 
+  ## Specify moderator values
+  covariates = list(sex = "female"))
+
+## Model for males
+output_4_m <- mediate(med_mod_4, out_mod_4, 
+  ## Specify variables
+  treat = "consc_cent", mediator = "proc_cent", 
+  ## Specify simulation options
+  boot = F, sims = 1000, boot.ci.type = "bca", 
+  ## Specify moderator values
+  covariates = list(sex = "male"))
+
+## Model for younger
+output_4_y <- mediate(med_mod_4, out_mod_4, 
+  ## Specify variables
+  treat = "consc_cent", mediator = "proc_cent", 
+  ## Specify simulation options
+  boot = F, sims = 1000, boot.ci.type = "bca", 
+  ## Specify moderator values
+  covariates = list(age_cent = -sd(sel_stud$age_cent)))
+
+## Model for older
+output_4_o <- mediate(med_mod_4, out_mod_4, 
+  ## Specify variables
+  treat = "consc_cent", mediator = "proc_cent", 
+  ## Specify simulation options
+  boot = F, sims = 1000, boot.ci.type = "bca", 
+  ## Specify moderator values
+  covariates = list(age_cent = sd(sel_stud$age_cent)))
+
+## Model for female, younger
+output_4_fy <- mediate(med_mod_4, out_mod_4, 
+  ## Specify variables
+  treat = "consc_cent", mediator = "proc_cent", 
+  ## Specify simulation options
+  boot = F, sims = 1000, boot.ci.type = "bca", 
+  ## Specify moderator values
+  covariates = list(sex = "female", age_cent = -sd(sel_stud$age_cent)))
+
+## Model for female, older
+output_4_fo <- mediate(med_mod_4, out_mod_4, 
+  ## Specify variables
+  treat = "consc_cent", mediator = "proc_cent", 
+  ## Specify simulation options
+  boot = F, sims = 1000, boot.ci.type = "bca", 
+  ## Specify moderator values
+  covariates = list(sex = "female", age_cent = sd(sel_stud$age_cent)))
+
+## Model for male, younger
+output_4_my <- mediate(med_mod_4, out_mod_4, 
+  ## Specify variables
+  treat = "consc_cent", mediator = "proc_cent", 
+  ## Specify simulation options
+  boot = F, sims = 1000, boot.ci.type = "bca", 
+  ## Specify moderator values
+  covariates = list(sex = "male", age_cent = -sd(sel_stud$age_cent)))
+
+## Model for male, older
+output_4_mo <- mediate(med_mod_4, out_mod_4, 
+  ## Specify variables
+  treat = "consc_cent", mediator = "proc_cent", 
+  ## Specify simulation options
+  boot = F, sims = 1000, boot.ci.type = "bca", 
+  ## Specify moderator values
+  covariates = list(sex = "male", age_cent = sd(sel_stud$age_cent)))
+
+## Examine results
+# Model for females
+summary(output_4_f)
+
+# Model for males
+summary(output_4_m)
+
+# Model for younger
+summary(output_4_y)
+
+# Model for older
+summary(output_4_o)
+
+# Model for female, younger
+summary(output_4_fy)
+
+# Model for female, older
+summary(output_4_fo)
+
+# Model for male, younger
+summary(output_4_my)
+
+# Model for male, older
+summary(output_4_mo)
+
+### Test statistical significance of indirect effect between values on the moderator
+## Set model without covariates specification
+output_4 <- mediate(med_mod_4, out_mod_4, 
+  ## Specify variables
+  treat = "consc_cent", mediator = "proc_cent", 
+  ## Specify simulation options
+  boot = F, sims = 1000, boot.ci.type = "bca")
+
+## Perform statistical test
+# Specify model
+test.modmed(output_4, 
+  # Specify covariates lists
+  covariates.1 = list(sex = "female", age_cent = -sd(sel_stud$age_cent)), 
+  covariates.2 = list(sex = "male", age_cent = sd(sel_stud$age_cent)))
+```
+
+## Moderated Mediation Model 5
+
+We estimate the moderated mediation model where **proc_cent** mediates the relationship between **consc_cent** and **ls.1_cent** and **sex** moderates the path from **consc_cent** to **proc_cent** and **sex** moderates the path from **proc_cent** to **ls.1_cent**.
+
+```{r modMed5}
+### Mediator model
+med_mod_5 <- lm(proc_cent ~ consc_cent*sex, data = sel_stud)
+
+### Outcome model
+out_mod_5 <- lm(ls.1_cent ~ consc_cent*sex + proc_cent*sex, data = sel_stud)
+
+### Examine results on original sample
+## Mediator model
+summary(med_mod_5)
+
+## Outcome model
+summary(out_mod_5)
+
+### Estimate moderated mediation
+## Model for females
+output_5_f <- mediate(med_mod_5, out_mod_5, 
+  ## Specify variables
+  treat = "consc_cent", mediator = "proc_cent", 
+  ## Specify simulation options
+  boot = F, sims = 1000, boot.ci.type = "bca", 
+  ## Specify moderator values
+  covariates = list(sex = "female"))
+
+## Model for males
+output_5_m <- mediate(med_mod_5, out_mod_5, 
+  ## Specify variables
+  treat = "consc_cent", mediator = "proc_cent", 
+  ## Specify simulation options
+  boot = F, sims = 1000, boot.ci.type = "bca", 
+  ## Specify moderator values
+  covariates = list(sex = "male"))
+
+## Examine results
+# Model for females
+summary(output_5_f)
+
+# Model for males
+summary(output_5_m)
+
+### Test statistical significance of indirect effect between values on the moderator
+## Set model without covariates specification
+output_5 <- mediate(med_mod_5, out_mod_5, 
+  ## Specify variables
+  treat = "consc_cent", mediator = "proc_cent", 
+  ## Specify simulation options
+  boot = F, sims = 1000, boot.ci.type = "bca")
+
+## Perform statistical test
+# Specify model
+test.modmed(output_5, 
+  # Specify covariates lists
+  covariates.1 = list(sex = "female"), 
+  covariates.2 = list(sex = "male"))
+```

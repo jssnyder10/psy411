@@ -1,0 +1,119 @@
+---
+title: "Simple Regression LAB"
+author: "YOUR NAME HERE"
+date: "XX/XX/21"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+editor_options:
+  chunk_output_type: console
+---
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document.
+
+## Default Options
+
+R Markdown works by typing regular text such as these words to describe **code chunks** you will execute.  A code chunk begins and ends with three back ticks.  With the opening three back ticks, you write: 
+
+1. the type of code you will write (e.g., _**r**_), 
+2. code chunk name if you wish, 
+3. code chunk options.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load Libraries
+
+Here we load the libraries we need for this script.  If your computer did not already install these packages, then you need to install them first.  To install packages, you can either: 
+
+1. type in your **Console** window _**install.packages("tidyverse")**_, or 
+2. select the **Tools** menu option followed by **Install Packages...**.
+
+```{r libraries, message=FALSE}
+### Load libaries for use in current working session
+## here for project work flow
+library(here)
+
+## tidyverse for data manipulation and plotting
+# Loads eight different libraries simultaneously
+library(tidyverse)
+
+## GGally to extend ggplot2 capabilities
+library(GGally)
+
+## psych for correlation matrices
+library(psych)
+
+## broom to extract output cleanly from many statistical models including "lm"
+library(broom) 
+
+## knitr to produce pleasing tables
+library(knitr) 
+```
+
+## Load Data
+
+Use the **read_csv** and **here** functions to read in the data from the appropriate location in the project directory.
+
+```{r data}
+
+```
+
+## Examine Data with Functions
+
+Use the **glimpse** function to preview the data and make sure that it was loaded properly
+
+```{r structure}
+
+```
+
+## Scatterplot Matrix
+
+Create a *scatterplot matrix* for *average temperature*, *total cases*, and *total tests*  using **dplyr** and **ggpairs**
+
+```{r scatterplot_matrix}
+
+```
+
+## Fitting a Linear Model
+
+Fit a simple linear regression model with _**lm**_ where *average temperature* is used to predict *total cases*
+
+use unstandardized *average temperature*
+
+```{r lm}
+
+```
+
+## Examine Results
+
+Use the *summary* function to examine the results
+
+```{r lm_results}
+
+```
+
+## Fitted and Residual Values
+
+*Augment* the data and save the calculations into a new data object called *dataAug*
+
+```{r augment}
+
+```
+
+## Scatterplot with Regression Line
+
+Create a scatterplot called *regPlot* with *Average Temperature* on the x-axis and *Total Cases* on the y-axis.  The plot should also include a horizontal line for the mean number of *Total Cases*, a *LOESS line*, and the *regression line*.
+
+Save the plot object to the *plots* folder in your project directory using the *ggsave* and *here* functions
+
+```{r reg_plot}
+
+```
+

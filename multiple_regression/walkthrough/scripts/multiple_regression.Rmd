@@ -1,0 +1,274 @@
+---
+title: "Analytical Lecture on Multiple Regression"
+author: "Jason Snyder"
+date: "XX/XX/2021"
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load Libraries
+
+We load the libraries we need for this script.  If your computer did not already install these packages, then you need to install them first.  To install packages, you can either: 
+
+1. type in your **Console** window _**install.packages("here")**_, or 
+2. select the **Tools** menu option followed by **Install Packages...**.
+
+```{r libraries, message=FALSE}
+### Load libaries for use in current working session
+## Library "here" for workflow
+library(here)
+
+## tidyverse for data manipulation and plotting
+# Loads eight different libraries simultaneously
+library(tidyverse)
+
+## broom to extract output cleanly from many statistical models including "lm"
+library(broom) 
+
+## knitr to produce pleasing tables
+library(knitr) 
+
+## plotly for 3D plotting
+library(plotly)
+```
+
+## Load Data
+
+We load the _**multiple_reg_driver.csv**_ data from the _**data**_ project directory folder.
+
+```{r data}
+## use read_csv() and here() to import the data file
+data <- read_csv(
+  ## use here() to locate file in our project directory
+  here("data", "multiple_reg_driver.csv")
+)
+```
+
+## Scatterplot in 3D
+
+We examine the data with the **glimpse** function from **dplyr**.  Then, we produce a 3D scatterplot with the **plot_ly** from the **plotly** library.
+
+```{r scatterplot}
+### Examine data
+glimpse(data)
+
+### 3D plot without regression plane
+## Select data and assign variables
+scatter3d <- plot_ly(data = data, 
+                     x = ~Interview, 
+                     y = ~Cognitive, 
+                     z = ~Performance, 
+                     opacity = 0.6) %>% 
+  ## Add data points  
+  add_markers() %>% 
+  ## Add axes labels
+  layout(scene = list(
+          xaxis = list(title = "Interview"),
+          yaxis = list(title = "Cognitive"),
+          zaxis = list(title = "Performance")))
+
+## View the plot
+scatter3d
+```
+
+## Multiple Regression
+
+We estimate a multiple regression model where we regress **Performance** ratings onto drivers' scores on the **Interview** and **Cognitive** tests.
+
+```{r model}
+##### Multiple regression
+#### Unstandardized coefficients
+model_1 <- lm(Performance ~ Interview + Cognitive, data = data)
+
+### Full summary
+summary(model_1)
+
+### Model summary
+glance(model_1)
+
+## Multiple correlation
+sqrt(glance(model_1)$r.squared)
+
+### Coefficients summary
+tidy(model_1)
+
+### Confidence intervals for single regression coefficients
+## 95% confidence interval
+# base
+confint(model_1)
+
+# tidy
+confint_tidy(model_1)	
+
+## 99% confidence interval
+# base
+confint(model_1, level = 0.99)
+
+# tidy
+confint_tidy(model_1, conf.level = .99)
+
+## Standardized coefficients
+model_1_z <- lm(scale(Performance) ~ scale(Interview) + scale(Cognitive), data = data)
+
+# Full summary
+summary(model_1_z)
+
+# Model summary
+glance(model_1_z)
+
+# Coefficients summary
+tidy(model_1_z)
+```
+
+### Fitted, Residual, and Predicted Values
+
+We examine the fitted, residual, and predicted values from the unstandardized coefficients multiple regression model.
+
+```{r fit_resid_pred}
+### Base functions
+## Fitted values for unstandardized model
+fitted(model_1)
+
+## Residual values for unstandardized model
+resid(model_1)
+
+### Using broom for fitted and residual values
+## Save calculations into data object
+data_aug <- augment(model_1, data)
+
+## Examine specific rows and variables of the augmented data
+# Select data
+data_aug %>%
+  # Choose specific rows
+  slice(c(1:5, 20, 24:30, 33, 40, 45:50)) %>%
+  # Select specific variables
+  select(.fitted, .resid) %>%
+  # Print the table
+  kable(caption = "Augmented Data", digits = 2)
+
+### Correlations
+## Multiple correlation for fitted and observed outcome values
+cor(data_aug$.fitted, data_aug$Performance)
+
+## Coefficient of determination
+cor(data_aug$.fitted, data_aug$Performance)^2
+
+## Correlation between residuals and predictor, outcome, and fitted values
+# Choose data
+data_aug %>%
+  # Select variables
+  select(Interview, Cognitive, Performance, .fitted, .resid) %>%
+  # Correlations
+  cor()
+
+### Predicting values on outcome for unobserved data
+## Summary of data
+summary(data)
+
+## Choose predictor values and apply to regression equation
+coef(model_1)[1] + coef(model_1)[2]*85 + coef(model_1)[3]*68
+```
+
+### Plotting Regression Plane
+
+We plot a regression plane in the three-dimensional space of the variables in the multiple regression model.
+
+```{r regression_plane}
+### Plot the observed versus fitted outcome values
+## Specify the data and mapping 
+ggplot(data_aug, aes(x = .fitted, y = Performance)) + 
+  ## Specify the geometry
+  geom_point() + 
+  #jitter layer to adjust points
+  geom_jitter() +
+  ## Specify the regression line
+  geom_smooth(method = "lm", se = F) +
+  ## Label the axes
+  labs(x = "Fitted Values")
+
+### Plotting regression plane
+## Set-up predictor value grid
+# Extract unique values for predictors
+x_vals = seq(min(model_1$model$Interview),max(model_1$model$Interview),length.out = 50)
+y_vals = seq(min(model_1$model$Cognitive),max(model_1$model$Cognitive),length.out = 50)
+
+# Grid of predictor values
+pred_data <- expand.grid(x_vals, y_vals)
+
+# Name the columns of the prediction grid
+names(pred_data) <- c("Interview", "Cognitive")
+
+## Use regression model to generate prediction values
+fit_vals <- predict(model_1, newdata = pred_data)
+
+# Organize prediction values in a matrix
+plane <- matrix(fit_vals, nrow = length(y_vals), 
+                ncol = length(x_vals), byrow = T)
+
+## Check transformations
+# Regression plane
+plane[3, 7]
+
+# Fitted values
+fit_vals[107]
+
+# Regression equation
+coef(model_1)[1] + coef(model_1)[2]*pred_data[107,1] + coef(model_1)[3]*pred_data[107,2]
+
+## Call the 3D scatterplot
+scatter3d %>% 
+  ## Add regression plane to 3D scatterplot
+  add_surface(x = ~ x_vals, y = ~ y_vals, z = ~ plane, showscale = T) %>%
+  ## Add title for color scale
+  colorbar(title = "Performance")
+```
+
+## Your Turn!
+
+Two exercises to complete.
+
+### Multiple Regression
+
+Run a multiple regression with **Performance** and **Cognitive** as predictors of **Interview**.  
+
+```{r your_turn_multiple_regression}
+
+```
+
+### Regression Plane
+
+Produce a 3D scatterplot with a regression plane where **Performance** and **Cognitive** predict **Interview**.  
+
+```{r your_turn_regression_plane}
+
+```
+
+## Model Comparison
+
+We evaluate nested models to determine how much additional variance we can account for in **Performance** by **Cognitive** above and beyond **Interview**.
+
+```{r model_comp}
+### Restricted model
+## Create model
+model_2 <- lm(Performance ~ Interview, data = data)		
+
+## Full summary
+summary(model_2)
+
+## Model summary
+glance(model_2)
+
+### Difference in R^2 between nested models
+glance(model_1)$r.squared - glance(model_2)$r.squared
+
+## Significance test
+anova(model_2, model_1)
+```

@@ -1,0 +1,281 @@
+---
+title: "Simple Mediation"
+author: "Jason Snyder"
+date: "XX/XX/2021"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load Libraries
+
+We load the libraries we need for this script.  If your computer did not already install these packages, then you need to install them first.  To install packages, you can either: 
+
+1. type in your **Console** window _**install.packages("here")**_, or 
+2. select the **Tools** menu option followed by **Install Packages...**.
+
+```{r libraries, message=FALSE}
+### Load libaries for use in current working session
+## here for workflow
+library(here)
+
+## tidyverse for data manipulation and plotting
+# Loads eight different libraries simultaneously
+library(tidyverse)
+
+## broom to extract output from statistical models
+library(broom) 
+
+## mediation for mediation models
+library(mediation) 
+```
+
+## Load Functions
+
+We load user-defined functions: **simpMedBoot** and **simpMedCarlo**.  These functions execute bootstrapping and Monte Carlo estimation for simple mediation models.
+
+```{r functions}
+### Source functions
+source(here("scripts", "simple_mediation_functions.R"))
+```
+
+## Load Data
+
+We load _**students.csv**_ from the _**data**_ project directory folder.
+
+```{r data}
+## Load data via the here function
+students <- read_csv(
+  (here("data", "students.csv"))
+  )
+```
+
+## Baron and Kenny Approach
+
+We evaluate the following mediation hypothesis:
+
+_The effect of conscientiousness on life satisfaction is mediated by procrastination._
+
+```{r baronKenny}
+### Create desired data
+## Write new data object
+sel_stud <- students %>%
+  ## Select variables
+  dplyr::select(ls.1, consc, proc) %>%
+  ## Keep only complete cases
+  na.omit()
+
+### Estimate first regression model
+## c path (total effect)
+m_1 <- lm(ls.1 ~ consc, data = sel_stud)
+
+### Estimate second regression model
+## a path 
+m_2 <- lm(proc ~ consc, data = sel_stud)
+
+### Estimate third regression model
+## b and c' paths 
+m_3 <- lm(ls.1 ~ consc + proc, data = sel_stud)
+
+### Evaluate coefficients
+## c path is significant:
+summary(m_1)
+
+## a path is significant:
+summary(m_2)
+
+## c' is not significant, b is significant:
+summary(m_3)
+
+### Sobel test
+## Save the coefficients
+# a coefficient
+a <- coef(m_2)[2]
+
+# b coefficient
+b <- coef(m_3)[3]
+
+# Estimate of indirect effect
+a*b
+
+# standard error of "a" path
+se_a <- summary(m_2)$coefficients[2,2]
+
+# standard error of "b" path
+se_b <- summary(m_3)$coefficients[3,2]
+
+## Compute z-value
+z_sobel <- a*b / sqrt(b^2*se_a^2 + a^2*se_b^2 + se_a^2*se_b^2)
+
+# Is the z value beyond the critical values (here: for alpha = .05)?
+z_sobel < qnorm(.025) | z_sobel > qnorm(.975)
+```
+
+## Mediation Package
+
+We estimate coefficients for the aforementioned simple mediation model using the **mediation** package.
+
+```{r mediation}
+### Specify regression models for mediator and outcome
+## Mediator model
+med_mod <- lm(proc ~ consc, data = sel_stud)
+
+## Outcome model
+out_mod <- lm(ls.1 ~ consc + proc, data = sel_stud)
+
+### Summaries
+## Mediator model
+summary(med_mod)
+
+## Outcome model
+summary(out_mod)
+
+### Mediation effects using bootstrapping
+output_med_boot = mediate(med_mod, out_mod, 
+                          treat = "consc", mediator = "proc", 
+                          boot = TRUE)
+
+## Examine results
+summary(output_med_boot)
+
+# Plot results
+plot(output_med_boot)
+
+### Mediation effects using Monte Carlo
+output_med_carlo <- mediate(med_mod, out_mod, 
+                    treat = "consc", mediator = "proc")
+
+## Examine results
+summary(output_med_carlo)
+
+# Plot results
+plot(output_med_carlo)
+
+```
+
+## Your Turn!
+
+Using the the different approaches, estimate the mediation effect of **proc** on the relationship between **neuro** and **sat.stress.1**
+
+```{r yourTurn}
+
+```
+
+## Monte Carlo Estimation
+
+We estimate _Monte Carlo_ coefficients for the aforementioned simple mediation model using the user-defined function: **simpMedCarlo**.
+
+```{r monteCarlo}
+#### One Monte Carlo estimate
+### What are the coefficients and standard errors again? 
+a
+b
+se_a
+se_b
+
+### Simulate normally distributed sampling distribution for a
+## Set seed for reproducibility
+set.seed(167)
+
+## Draw samples
+sample_a <- rnorm(200000, mean = a, sd = se_a)
+
+### Simulate normally distributed sampling distribution for b
+## Set seed for reproducibility
+set.seed(167)
+
+## Draw samples
+sample_b <- rnorm(200000, mean = b, sd = se_b)
+
+### Look at distributions
+## a coefficient
+ggplot(data.frame(sample_a), aes(x = sample_a)) +
+  ## Histogram geometry
+  geom_histogram(bins = 20)
+
+## b coefficient
+ggplot(data.frame(sample_b), aes(x = sample_b)) +
+  ## Histogram geometry
+  geom_histogram(bins = 20)
+
+### Select random values for a and b and multiply them
+## Set seed
+set.seed(203)
+
+## Calculate single indirect effect Monte Carlo estimate
+ab_carlo <- sample(sample_a, 1) * sample(sample_b, 1)
+
+## Alternative method for Monte Carlo indirect effect estimate
+ab_carlo <- rnorm(1, mean = a, sd = se_a) * 
+  rnorm(1, mean = b, sd = se_b)
+
+#### Multiple Monte Carlo estimates
+### Simulate one Monte Carlo estimate
+## Set seed
+set.seed(321)
+
+## Calculate a single estimate
+simpMedCarlo(a = coef(m_2)[2], b = coef(m_3)[3], cp = coef(m_3)[2], 
+             se_a = summary(m_2)$coefficients[2,2], 
+             se_b = summary(m_3)$coefficients[3,2], 
+             se_cp = summary(m_3)$coefficients[2,2])
+
+### Simulate multiple Monte Carlo estimates
+## Set seed
+set.seed(345)
+
+## Produce estimates with replicate
+output_carlo <- replicate(1000,
+  ## Call function
+  simpMedCarlo(a = coef(m_2)[2], 
+               b = coef(m_3)[3], 
+               cp = coef(m_3)[2], 
+               se_a = summary(m_2)$coefficients[2,2], 
+               se_b = summary(m_3)$coefficients[3,2], 
+               se_cp = summary(m_3)$coefficients[2,2]), 
+  simplify = F) %>%
+  ## Bind rows
+  bind_rows()
+
+## What are the means of the distributions? 
+carlo_mean <- colMeans(output_carlo)
+
+## What are the standard deviations (standard errors) of the distributions?
+carlo_sd <- map_df(output_carlo, sd)
+
+### What are the values of the 2.5th and 97.5th percentiles? 
+### 95% Confidence Interval
+## Create data frame
+carlo_ci_res <- as.data.frame(
+  ## Call map and define anonymous function
+  map(output_carlo, function (ndx) {
+    ## Contents of anonymous function
+    quantile(ndx, probs = c(0.025, 0.5, 0.975))}))
+
+### Create density plot
+## Call data and mapping
+ggplot(output_carlo, aes(x = ab_carlo)) +
+  ## Density plot
+  geom_histogram(aes(y = ..density..), color = "black", 
+                 fill = "white", bins = 40) +
+  ## Density curve
+  geom_density(fill = "#FF6666", alpha = 0.2) +
+  ## Vertical lines for quantiles
+  geom_vline(data = carlo_ci_res, 
+             mapping = aes(xintercept = ab_carlo),
+             color="blue", linetype="dashed", size=1) +
+  ## Labels for vertical lines
+  geom_text(data = carlo_ci_res, 
+            mapping = aes(x = ab_carlo, y = 0.4, 
+                          label = paste(row.names(carlo_ci_res), 
+                                        "=", round(ab_carlo, 2))), 
+            size = 4, angle = 90, vjust = -0.4, 
+            hjust = 0, color = "purple")
+```

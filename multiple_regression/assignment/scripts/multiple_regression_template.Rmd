@@ -1,0 +1,93 @@
+---
+title: "Multiple Regression LAB"
+author: "YOUR NAME HERE"
+date: "XX/XX/2021"
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load Libraries
+
+We load the libraries we need for this script.  If your computer did not already install these packages, then you need to install them first.  To install packages, you can either: 
+
+1. type in your **Console** window _**install.packages("here")**_, or 
+2. select the **Tools** menu option followed by **Install Packages...**.
+
+```{r libraries, message=FALSE}
+### Load libaries for use in current working session
+## Library "here" for workflow
+library(here)
+
+## tidyverse for data manipulation and plotting
+# Loads eight different libraries simultaneously
+library(tidyverse)
+
+## broom to extract output cleanly from many statistical models including "lm"
+library(broom) 
+
+## knitr to produce pleasing tables
+library(knitr) 
+
+## plotly for 3D plotting
+library(plotly)
+```
+
+## Load Data
+
+Use the **read_csv** and **here** functions to read in the data from the appropriate location in the project directory.
+
+```{r data}
+
+```
+
+## Scatterplot in 3D
+
+Use the **glimpse** function from **dplyr** to examine the data.  Then, produce a 3D scatterplot to visualize how **Personality** and **Sitdriving** influence **Performance** ratings with the **plot_ly** function from the **plotly** library.
+
+```{r scatterplot}
+
+```
+
+## Multiple Regression
+
+Estimate a multiple regression model where **Performance** ratings are regressed onto drivers' scores on the **Personality** and **Sitdriving** tests.
+
+Use *unstandardized* predictors
+
+```{r model}
+
+```
+
+### Fitted, Residual, and Predicted Values
+
+Examine the correlation between residuals and predictor, outcome, and fitted values from the unstandardized coefficients multiple regression model.
+
+```{r fit_resid_pred}
+
+```
+
+### Plotting Regression Plane
+
+Plot a regression plane in the three-dimensional space of the variables in the multiple regression model.
+
+```{r regression_plane}
+
+```
+
+## Model Comparison
+
+Evaluate the difference in variance explained between the model you just created and a new model where **Performance** is regressed only on **Personality**
+
+Hint: The two models are nested models 
+
+```{r model_comp}
+
+```

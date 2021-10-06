@@ -1,0 +1,270 @@
+---
+title: "Logistic Regression Walkthrough"
+author: "Jason Snyder"
+date: "XX/XX/2021"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load Libraries
+
+We load the libraries we need for this script.  If your computer did not already install these packages, then you need to install them first.  To install packages, you can either: 
+
+1. type in your **Console** window _**install.packages("here")**_, or 
+2. select the **Tools** menu option followed by **Install Packages...**.
+
+```{r libraries, message=FALSE}
+### Load libaries for use in current working session
+## here for workflow
+library(here)
+
+## tidyverse for data manipulation and plotting
+# Loads eight different libraries simultaneously
+library(tidyverse)
+
+## broom to extract output from statistical models
+library(broom) 
+
+## aod for statistical tests
+library(aod)
+
+## descr for statistical tests
+library(descr)
+```
+
+## Load Data
+
+We load _**school.RData**_ from the _**data**_ project directory folder.
+
+```{r data}
+## Load data via the here function
+load(here("data", "school.RData"))
+```
+
+## Example Probability Curves
+
+We produce a set of example probability curves.
+
+```{r probCurve}
+### Set parameters
+## Create grid
+prob_ex <- expand.grid(b0 = seq(-2, 2, 2), 
+  b1 = seq(-2, 2, 2), x = seq(-5, 5, 0.1)) %>%
+  ## Convert to tibble
+  as_tibble() %>%
+  ## Calculate probabilities
+  mutate(p = exp(b0 + b1*x)/(1 + exp(b0 + b1*x)))
+
+### Plot
+## Set data and mapping
+ggplot(prob_ex, aes(x = x, y = p)) +
+  ## Choose geometry
+  geom_line() +
+  ## Facet
+  facet_grid(b1 ~ b0)
+```
+
+## Simple Logistic Regression
+
+We examine the probability of _graduate school admittance_ as a function of _undergraduate GPA_.
+
+```{r simpLog}
+### Examine categorical outcome
+## Levels
+levels(school$admit)
+
+## Contrasts
+contrasts(school$admit)
+
+### Estimate simple logistic regression model
+simp_mod <- glm(admit ~ gpa, data = school, family = "binomial")
+
+## Examine summary
+summary(simp_mod)
+
+## Examine coefficients
+tidy(simp_mod)
+
+## Examine overall model results
+glance(simp_mod) 
+
+### Predictions
+## Logit predictions and diagnostics
+school_simp_aug <- augment(simp_mod)
+
+## Logit predictions
+school$simp_logit <- predict(simp_mod)
+
+## Odds ratio predictions
+school$simp_odds <- exp(predict(simp_mod))
+
+## Probability predictions
+school$simp_prob <- fitted(simp_mod)
+
+### Accuracy of predictions
+## Name result and choose data
+acc_simp_mod <- school %>%
+  ## Summarize
+  # True positives
+  summarize(tp = sum(simp_prob >= 0.4 & admit == "Yes"),
+            # True negatives
+            tn = sum(simp_prob < 0.4 & admit == "No"),
+            # False positives
+            fp = sum(simp_prob >= 0.4 & admit == "No"),
+            # False negatives
+            fn = sum(simp_prob < 0.4 & admit == "Yes"))
+
+## Accuracy computations
+acc_simp_mod %>%
+  # Overall accuracy
+  summarize(overall = (tp + tn)/(tp + tn + fp + fn),
+            # Positive accuracy
+            positive = tp/(tp + fp),
+            # Negative accuracy
+            negative = tn/(tn + fn),
+            # Sensitivity
+            sensitivity = tp/(tp + fn),
+            # Specificity
+            specificity = tn/(tn + fp))
+
+### Convert coefficients to odds ratios
+exp(coef(simp_mod))
+
+## convert odds ratio to percent multiplicative increase
+exp(coef(simp_mod))/(1 + exp(coef(simp_mod)))
+
+## Odds ratio confidence intervals
+exp(confint(simp_mod))
+
+### Statistical tests
+## Likelihood ratio test for model
+LogRegR2(simp_mod)
+
+## Wald test for regression coefficients
+wald.test(b = coef(simp_mod), Sigma = vcov(simp_mod), Terms = 2)
+
+### Plot
+## Choose data and mapping
+ggplot(school, aes(x = gpa, y = as.numeric(admit) - 1)) +
+  ## Point geometry
+  geom_point(alpha = 0.5) +
+  ## Smooth geometry
+  geom_smooth(method = "glm", se = TRUE, 
+              method.args = list(family = "binomial")) +
+  ## Axes labels
+  labs(x = "GPA", y = "Admit")
+```
+
+## Multiple Logistic Regression
+
+We examine the probability of _graduate school admittance_ as a function of _undergraduate GPA_ and _school prestige_.
+
+```{r multLog}
+### Examine categorical predictor
+## Levels
+levels(school$rank)
+
+## Contrasts
+contrasts(school$rank)
+
+## Cross-Tabulations
+xtabs(~ admit + rank, data = school)
+
+### Estimate multiple logistic regression model
+mult_mod <- glm(admit ~ gpa + rank, data = school, family = "binomial")
+
+## Examine results
+summary(mult_mod)
+
+## Augmented data
+school_mult_aug <- augment(mult_mod, se_fit = TRUE)
+
+### Compute predictions for each observation
+## Logit predictions
+school$mult_logit <- predict(mult_mod)
+
+## Odds ratio predictions
+school$mult_odds <- exp(predict(mult_mod))
+
+## Probability predictions
+school$mult_prob <- fitted(mult_mod)
+
+### Accuracy of predictions
+## Name result and choose data
+acc_mult_mod <- school %>%
+  ## Summarize
+  # True positives
+  summarize(tp = sum(mult_prob >= 0.5 & admit == "Yes"),
+            # True negatives
+            tn = sum(mult_prob < 0.5 & admit == "No"),
+            # False positives
+            fp = sum(mult_prob >= 0.5 & admit == "No"),
+            # False negatives
+            fn = sum(mult_prob < 0.5 & admit == "Yes"))
+
+## Accuracy computations
+acc_mult_mod %>%
+  # Overall accuracy
+  summarize(overall = (tp + tn)/(tp + tn + fp + fn),
+            # Positive accuracy
+            positive = tp/(tp + fp),
+            # Negative accuracy
+            negative = tn/(tn + fn),
+            # Sensitivity
+            sensitivity = tp/(tp + fn),
+            # Specificity
+            specificity = tn/(tn + fp))
+
+### Convert coefficients to odds ratios
+exp(coef(mult_mod))
+
+## Odds ratio confidence intervals
+exp(confint(mult_mod))
+
+### Statistical tests
+## Likelihood ratio test for model
+LogRegR2(mult_mod)
+
+## Wald test for categorical predictor
+wald.test(b = coef(mult_mod), Sigma = vcov(mult_mod), Terms = 3:5)
+
+## Hierarchical test of models
+anova(simp_mod, mult_mod, test = "Chisq")
+
+### Plot
+## Calculate probability bands
+# Choose data
+school_mult_aug <- school_mult_aug %>%
+  # Calculate probability
+  mutate(prob = plogis(.fitted),
+         # Calculate lower band probability
+         prob_lower = plogis(.fitted - 1.96*.se.fit), 
+         # Calculate upper band probability
+         prob_upper = plogis(.fitted + 1.96*.se.fit))
+
+## Choose data and mapping
+ggplot(school_mult_aug, aes(x = gpa, y = prob)) +
+  ## Ribbon geometry for bands
+  geom_ribbon(aes(ymin = prob_lower, ymax = prob_upper, fill = rank), 
+              alpha = 0.2) + 
+  ## Line geometry for predictions
+  geom_line(aes(color = rank), size = 2) +
+  ## Labels
+  labs(x = "GPA", y = "Probability", color = "Rank", fill = "Rank")
+```
+
+## Your Turn!
+
+Estimate the multiple logistic regression model where _admittance to graduate school_ is a function of _undergraduate GPA_ and _GRE_.
+
+```{r yourTurn}
+
+```

@@ -1,0 +1,93 @@
+---
+title: "Moderated Mediation Template Script"
+author: "YOUR NAME HERE"
+date: "XX/XX/2021"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load Libraries
+
+We load the libraries we need for this script.  If your computer did not already install these packages, then you need to install them first.  To install packages, you can either: 
+
+1. type in your **Console** window _**install.packages("here")**_, or 
+2. select the **Tools** menu option followed by **Install Packages...**.
+
+```{r libraries, message=FALSE}
+### Load libaries for use in current working session
+## here for workflow
+library(here)
+
+## tidyverse for data manipulation and plotting
+# Loads eight different libraries simultaneously
+library(tidyverse)
+
+## broom to extract output from statistical models
+library(broom) 
+
+## mediation for mediation models
+library(mediation) 
+```
+
+## Load Data
+
+Load _**students.RData**_ from the _**data**_ project directory folder.
+
+```{r data}
+
+```
+
+## Wrangle Data
+
+Wrangle the loaded data to prepare for analyses.
+
+Create a new data object called *sel_stud* that contains only the complete cases on the variables for mood (*gb.1*), neuroticism (*neuro*), life satisfaction (*ls.1*), and sex (*sex*)
+
+Center the continuous predictor variables (mood, neuroticism, & life satisfaction) using the *mutate_at* function and adding the variables back to the *sel_stud* data object
+
+```{r dataWrangle}
+
+```
+
+## Moderated Mediation Model
+
+Estimate a moderated mediation model where **gb.1_cent** mediates the relationship between **neuro_cent** and **ls.1_cent** and **sex** moderates the path from **neuro_cent** to **gb.1_cent**.
+
+Create an mediator model object called *med_mod* where the *gb.1_cent* is predicted by *neuro_cent*, *sex*, and their *interaction term*
+
+Create an outcome model object called *out_mod* where ls.1_cent is predicted by *neuro_cent*, *sex*, and their *interaction*, as well as *gb.1_cent*
+
+Use _summary_ on both model objects to review the results of the regression models
+
+```{r modMed}
+
+```
+
+
+## Estimate moderated mediation effects
+
+Next, you will estimate the moderated mediation effects for the different levels of *sex*
+
+Create an object called *output_f* by specifying *med_mod* and *out_mod* inside of the _mediate_ function.  Specify *neuro_cent* as the treatment variable (i.e., treat = neuro_cent) and *gb.1_cent* as the mediator variable (i.e., mediator = gb.1_cent).  Set *boot = F*, *sims = 1000*, and *boot.ci.type = "bca"*.
+Specify the covariate as *female*
+
+Create another object called *output_m* by specifying *med_mod* and *out_mod* inside of the _mediate_ function.  Specify *neuro_cent* as the treatment variable (i.e., treat = neuro_cent) and *gb.1_cent* as the mediator variable (i.e., mediator = gb.1_cent).  Set *boot = F*, *sims = 1000*, and *boot.ci.type = "bca"*.
+Specify the covariate as *male*
+
+Apply _summary_ to both *output_f* and *output_m* objects
+
+Lastly, create an object called *output_fm* by specifying *med_mod* and *out_mod* inside of the _mediate_ function.  Specify *neuro_cent* as the treatment variable (i.e., treat = neuro_cent) and *gb.1_cent* as the mediator variable (i.e., mediator = gb.1_cent).  Set *boot = F*, *sims = 1000*, and *boot.ci.type = "bca"*.
+
+Inside of the _test.modmed_ function, specify *output_fm* as the model and then specify female and male as covariates to test whether the indirect effect is significantly different between women and men
+
+```{r modMedOut}
+
+```

@@ -1,0 +1,108 @@
+---
+title: "Categorical Predictors and Moderated Regression w/ Categorical Predictors Template"
+author: "YOUR NAME HERE"
+date: "XX/XX/2021"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load Libraries
+
+We load the libraries we need for this script.  If your computer did not already install these packages, then you need to install them first.  To install packages, you can either: 
+
+1. type in your **Console** window _**install.packages("here")**_, or 
+2. select the **Tools** menu option followed by **Install Packages...**.
+
+```{r libraries, message=FALSE}
+### Load libaries for use in current working session
+## here for workflow
+library(here)
+
+## tidyverse for data manipulation and plotting
+# Loads eight different libraries simultaneously
+library(tidyverse)
+
+## broom to extract output from statistical models
+library(broom) 
+
+## interactions to prepare 2D plot
+library(interactions) 
+
+## jtools for printing clean results tables
+library(jtools)
+
+## effects for calculating model statistics
+library(effects)
+```
+
+## Load Data
+
+Load the _**students.RData**_ from the _**data**_ project directory folder.
+
+```{r data}
+
+```
+
+## Dummy Coding
+
+Check to make sure that the **sex** variable from the **students** data is dummy coded (i.e., female is assigned a value of 0 and male is assigned a value of 1).  
+
+```{r dummyCoding}
+
+```
+
+## Combining Continuous and Categorical Predictors
+  
+Next you will estimate regression models where both **sex** and agreeableness (**agree**) are predictors of extraversion (**extra**). 
+
+First create a new data object called *sel_stud* that consists of the variables *extra*, *agree*, and *sex*.  Be sure to include complete cases only
+
+Next, overwrite the *sel_stud* data to create a new variable called *agree_cent* that is the mean centered version of agreeableness
+
+click on *sel_stud* in the global environment to make sure that the new variable was created
+
+```{r wrangling}
+
+```
+
+Now you will estimate two regression models, a main effects model and an interaction effect model, where extraversion (*extra*) is a function of agreeableness (*agree*) and *sex*
+
+For both models, make sure to use centered agreeableness (*agree_cent*)
+
+Inspect both models using either the summary() or summ() functions
+
+Use the *glance()* function to compute the change in R^2 between the models and use the *anova* function to see if the difference in R^2 between the models is significant
+
+Lastly, use the interaction effect model to augment the data. Save the result back into the *sel_stud* data
+
+```{r intEff}
+
+```
+
+## Interaction Plot
+
+Plot the interaction present in the model using the *interact_plot* function.  Specify *agree_cent* as the pred variable (i.e., pred = agree_cent) and *sex* as the modx variable (i.e., modx = sex)
+
+Make sure to appropriately label your axes and set the limits on the y axis to fit the scale of extraversion (i.e., set the yaxis to *ylim(1, 5)*)
+
+```{r plots}
+
+```
+
+## Simple slopes
+
+Calculate the simple slopes for the interaction effect using the *sim_slopes()* function 
+
+Specify *agree_cent* as the pred variable (i.e., pred = agree_cent) and *sex* as the modx variable (i.e., modx = sex)
+
+```{r ss}
+
+```
